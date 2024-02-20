@@ -2,12 +2,12 @@ package com.chadtalty.commons.data.access;
 
 import static org.springframework.data.jpa.domain.Specification.where;
 
-import com.calflany.data.jpa.Criteria;
-import com.calflany.data.jpa.JoinColumn;
-import com.calflany.data.jpa.filter.BasicFilter;
-import com.calflany.data.jpa.filter.Filter;
 import com.chadtalty.commons.data.access.filter.handler.FilterHandlerFactory;
 import com.chadtalty.commons.data.access.repository.EntityRepository;
+import com.chadtalty.commons.data.query.Criteria;
+import com.chadtalty.commons.data.query.Filter;
+import com.chadtalty.commons.data.query.JoinColumn;
+import com.chadtalty.commons.data.query.filter.BasicFilter;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Join;
 import jakarta.validation.Valid;
@@ -103,6 +103,9 @@ public abstract class AbstractDAO<E, R extends EntityRepository<E, Long>> implem
         return this.repository.findAll(bySearchCriteria(criteria), getPageRequest(criteria));
     }
 
+    /**
+     *
+     */
     @Override
     public List<E> getQueryResult(Criteria criteria) {
         return this.repository.findAll(bySearchCriteria(criteria));
@@ -130,6 +133,13 @@ public abstract class AbstractDAO<E, R extends EntityRepository<E, Long>> implem
         return this.repository.save(entity);
     }
 
+    /**
+     *
+     * @param <P>
+     * @param criteria
+     * @param clazz
+     * @return
+     */
     public <P> List<P> findBy(Criteria criteria, Class<P> clazz) {
         return this.repository.findBy(
                 bySearchCriteria(criteria), q -> q.as(clazz).all());
@@ -145,10 +155,16 @@ public abstract class AbstractDAO<E, R extends EntityRepository<E, Long>> implem
         return this.repository;
     }
 
+    /*
+     *
+     */
     private Specification<E> bySearchCriteria(Criteria criteria) {
         return filter(criteria).and(join(criteria));
     }
 
+    /*
+     *
+     */
     private Specification<E> filter(Criteria criteria) {
 
         if (criteria.getFilters() == null || criteria.getFilters().isEmpty()) {
@@ -163,6 +179,9 @@ public abstract class AbstractDAO<E, R extends EntityRepository<E, Long>> implem
         return specification;
     }
 
+    /*
+     *
+     */
     private Specification<E> join(Criteria criteria) {
 
         if (criteria.getJoins() == null || criteria.getJoins().isEmpty()) {
@@ -176,7 +195,10 @@ public abstract class AbstractDAO<E, R extends EntityRepository<E, Long>> implem
         return specification;
     }
 
-    public Specification<E> with(@Valid JoinColumn joinColumn) {
+    /*
+     *
+     */
+    private Specification<E> with(@Valid JoinColumn joinColumn) {
         return (root, query, criteriaBuilder) -> {
             Join<Object, Object> join = root.join(joinColumn.getJoin());
             BasicFilter filter = (BasicFilter) joinColumn.getFilter();
@@ -190,34 +212,21 @@ public abstract class AbstractDAO<E, R extends EntityRepository<E, Long>> implem
                 .handle(filter);
     }
 
+    /*
+     *
+     */
     private PageRequest getPageRequest(Criteria criteria) {
 
         Sort sort = null;
 
         if (criteria.getOrder() == null) {
+
             sort = Sort.unsorted();
+
         } else {
-            List<Sort.Order> desc = new ArrayList<>();
 
-            if (criteria.getOrder().getDescending() != null
-                    && !criteria.getOrder().getDescending().isEmpty()) {
-
-                desc = criteria.getOrder().getDescending().stream()
-                        .filter(Objects::nonNull)
-                        .map(Sort.Order::desc)
-                        .collect(Collectors.toList());
-            }
-
-            List<Sort.Order> asc = new ArrayList<>();
-
-            if (criteria.getOrder().getAscending() != null
-                    && !criteria.getOrder().getAscending().isEmpty()) {
-
-                asc = criteria.getOrder().getAscending().stream()
-                        .filter(Objects::nonNull)
-                        .map(Sort.Order::asc)
-                        .collect(Collectors.toList());
-            }
+            var asc = this.getAsc(criteria);
+            var desc = this.getDesc(criteria);
 
             if (asc.isEmpty() && desc.isEmpty()) {
                 sort = Sort.unsorted();
@@ -231,5 +240,41 @@ public abstract class AbstractDAO<E, R extends EntityRepository<E, Long>> implem
         }
 
         return PageRequest.of(criteria.getPage(), criteria.getSize(), sort);
+    }
+
+    /*
+     *
+     */
+    private List<Sort.Order> getDesc(Criteria criteria) {
+
+        List<Sort.Order> desc = new ArrayList<>();
+
+        if (criteria.getOrder().getDescending() != null
+                && !criteria.getOrder().getDescending().isEmpty()) {
+
+            desc = criteria.getOrder().getDescending().stream()
+                    .filter(Objects::nonNull)
+                    .map(Sort.Order::desc)
+                    .collect(Collectors.toList());
+        }
+
+        return desc;
+    }
+
+    /*
+     *
+     */
+    private List<Sort.Order> getAsc(Criteria criteria) {
+        List<Sort.Order> asc = new ArrayList<>();
+
+        if (criteria.getOrder().getAscending() != null
+                && !criteria.getOrder().getAscending().isEmpty()) {
+
+            asc = criteria.getOrder().getAscending().stream()
+                    .filter(Objects::nonNull)
+                    .map(Sort.Order::asc)
+                    .collect(Collectors.toList());
+        }
+        return asc;
     }
 }

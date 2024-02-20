@@ -1,6 +1,6 @@
 package com.chadtalty.commons.data.access.filter.handler;
 
-import com.calflany.data.jpa.filter.FilterType;
+import com.chadtalty.commons.data.query.filter.FilterType;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.stereotype.Component;

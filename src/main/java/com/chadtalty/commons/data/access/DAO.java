@@ -1,6 +1,6 @@
 package com.chadtalty.commons.data.access;
 
-import com.calflany.data.jpa.Criteria;
+import com.chadtalty.commons.data.query.Criteria;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

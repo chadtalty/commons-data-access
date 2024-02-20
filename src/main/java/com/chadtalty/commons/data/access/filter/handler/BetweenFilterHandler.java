@@ -1,8 +1,8 @@
 package com.chadtalty.commons.data.access.filter.handler;
 
-import com.calflany.data.jpa.filter.BetweenFilter;
-import com.calflany.data.jpa.filter.Filter;
-import com.calflany.data.jpa.filter.FilterType;
+import com.chadtalty.commons.data.query.Filter;
+import com.chadtalty.commons.data.query.filter.BetweenFilter;
+import com.chadtalty.commons.data.query.filter.FilterType;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
