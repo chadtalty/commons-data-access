@@ -3,11 +3,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.calflany</groupId>
+    <groupId>com.chadtalty</groupId>
     <artifactId>commons-data-access</artifactId>
     <version>0.0.1</version>
 
-    <name>commons-data-access</name>
+    <name>Commons Data Access</name>
 
     <properties>
         <maven.compiler.release>17</maven.compiler.release>

@@ -1,4 +1,4 @@
-package com.calflany.commons.data.access;
+package com.chadtalty.commons.data.access;
 
 import java.util.List;
 

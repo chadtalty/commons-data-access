@@ -1,13 +1,13 @@
-package com.calflany.commons.data.access;
+package com.chadtalty.commons.data.access;
 
 import static org.springframework.data.jpa.domain.Specification.where;
 
-import com.calflany.commons.data.access.filter.handler.FilterHandlerFactory;
-import com.calflany.commons.data.access.repository.EntityRepository;
 import com.calflany.data.jpa.Criteria;
 import com.calflany.data.jpa.JoinColumn;
 import com.calflany.data.jpa.filter.BasicFilter;
 import com.calflany.data.jpa.filter.Filter;
+import com.chadtalty.commons.data.access.filter.handler.FilterHandlerFactory;
+import com.chadtalty.commons.data.access.repository.EntityRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Join;
 import jakarta.validation.Valid;

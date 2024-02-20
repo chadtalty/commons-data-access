@@ -1,4 +1,4 @@
-package com.calflany.commons.data.access.filter.handler;
+package com.chadtalty.commons.data.access.filter.handler;
 
 import com.calflany.data.jpa.filter.Filter;
 import org.springframework.data.jpa.domain.Specification;

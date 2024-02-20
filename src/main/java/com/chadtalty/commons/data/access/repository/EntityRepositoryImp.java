@@ -1,4 +1,4 @@
-package com.calflany.commons.data.access.repository;
+package com.chadtalty.commons.data.access.repository;
 
 import jakarta.persistence.EntityManager;
 import java.io.Serializable;
