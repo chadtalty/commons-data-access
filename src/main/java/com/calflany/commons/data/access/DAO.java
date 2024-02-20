@@ -1,31 +1,27 @@
 package com.calflany.commons.data.access;
 
+import com.calflany.data.jpa.Criteria;
 import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import com.calflany.commons.data.access.specification.Filter;
-
-
 public interface DAO<T, R> {
 
-    public T findById(long id);
+    T findById(long id);
 
-    public List<T> findAll();
+    List<T> findAll();
 
-    public Page<T> findAll(Pageable pageable);
+    Page<T> findAll(Pageable pageable);
 
-    public Long count();
+    Long count();
 
-    public List<T> getQueryResult(Filter... filters);
+    Page<T> getQueryResultPage(Criteria criteria);
 
-    public Page<T> getQueryResult(Pageable pageable, Filter... filters);
+    List<T> getQueryResult(Criteria criteria);
 
-    public boolean existsById(Long id);
+    boolean existsById(Long id);
 
-    public T save(T entity);
+    T save(T entity);
 
-    public R getRepository();
-
+    R getRepository();
 }

@@ -2,214 +2,234 @@ package com.calflany.commons.data.access;
 
 import static org.springframework.data.jpa.domain.Specification.where;
 
-import java.time.Instant;
+import com.calflany.commons.data.access.filter.handler.FilterHandlerFactory;
+import com.calflany.commons.data.access.repository.EntityRepository;
+import com.calflany.data.jpa.Criteria;
+import com.calflany.data.jpa.JoinColumn;
+import com.calflany.data.jpa.filter.BasicFilter;
+import com.calflany.data.jpa.filter.Filter;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.Join;
+import jakarta.validation.Valid;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
-
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
-import com.calflany.commons.data.access.repository.EntityRepository;
-import com.calflany.commons.data.access.specification.Filter;
-import com.calflany.commons.data.access.specification.OperatorType;
-
-import jakarta.persistence.EntityNotFoundException;
-
+/**
+ * AbstractDAO provides abstract JpaRepository functionality.
+ *
+ * @param <E> Entity type
+ * @param <R> EntityRepository type
+ */
 public abstract class AbstractDAO<E, R extends EntityRepository<E, Long>> implements DAO<E, R> {
 
+    /**
+     * EntityRepository.
+     */
     @Autowired
     protected R repository;
 
+    private FilterHandlerFactory<E> filterHandlerFactory;
+
+    @Autowired
+    public final void setFilterHandlerFactory(FilterHandlerFactory<E> filterHandlerFactory) {
+        this.filterHandlerFactory = filterHandlerFactory;
+    }
+
+    /**
+     * Find entity of type E by ID. Throws EntityNotFoundException if entity not
+     * found.
+     *
+     * @param id Identifier
+     * @return Entity of type E
+     */
     @Override
     public E findById(long id) {
         return this.repository.findById(id).orElseThrow(() -> new EntityNotFoundException("Entity not found: " + id));
     }
 
+    /**
+     * Returns a list all entities of type E/
+     *
+     * @return List of entities of type E
+     */
     @Override
     public List<E> findAll() {
         return this.repository.findAll();
     }
 
+    /**
+     * Returns a Page of all entities of type E.
+     * Utilizes Java Pagination which is a concept used to access the content by
+     * using First Page, Second Page, etc.
+     *
+     * @param pageable
+     * @return page of entities of type E
+     */
     @Override
     public Page<E> findAll(Pageable pageable) {
         return this.repository.findAll(pageable);
     }
 
+    /**
+     * Returns the number of entities available.
+     *
+     * @return the number of entities.
+     */
     @Override
     public Long count() {
         return this.repository.count();
     }
 
+    /**
+     * Returns Query Results that match filter ctriteria with the addition of being
+     * able to page/sort the results. Instead of returning a Page<E>, this method
+     * returns a List<E> to match other methods in this library.
+     *
+     * @param pageable contains page and sorting information
+     * @param filters  List of query Filters
+     * @return List of entities of type T
+     */
     @Override
-    public List<E> getQueryResult(Filter... filters) {
-        return this.repository
-                .findAll(getSpecificationFromFilters(
-                        Arrays.stream(filters).collect(Collectors.toCollection(ArrayList::new))));
+    public Page<E> getQueryResultPage(Criteria criteria) {
+        return this.repository.findAll(bySearchCriteria(criteria), getPageRequest(criteria));
     }
 
     @Override
-    public Page<E> getQueryResult(Pageable pageable, Filter... filters) {
-        return this.repository
-                .findAll(getSpecificationFromFilters(
-                        Arrays.stream(filters).collect(Collectors.toCollection(ArrayList::new))), pageable);
+    public List<E> getQueryResult(Criteria criteria) {
+        return this.repository.findAll(bySearchCriteria(criteria));
     }
 
+    /**
+     * Checks if an entity with the provided ID exists in the repository
+     *
+     * @param id entity identifier
+     * @return boolean true if exist
+     */
     @Override
     public boolean existsById(Long id) {
         return this.repository.existsById(id);
     }
 
+    /**
+     * Saves entity to the repository
+     *
+     * @param entity Entity of type E
+     * @return returns entity with id
+     */
     @Override
     public E save(E entity) {
         return this.repository.save(entity);
     }
 
+    public <P> List<P> findBy(Criteria criteria, Class<P> clazz) {
+        return this.repository.findBy(
+                bySearchCriteria(criteria), q -> q.as(clazz).all());
+    }
+
+    /**
+     * Returns the client defined EntityRepository back to the client
+     *
+     * @return repository of type R
+     */
     @Override
     public R getRepository() {
         return this.repository;
     }
 
-    private Specification<E> getSpecificationFromFilters(List<Filter> filters) {
-        Specification<E> specification = where(createSpecification(filters.remove(0)));
-        filters.forEach(filter -> specification.and(createSpecification(filter)));
+    private Specification<E> bySearchCriteria(Criteria criteria) {
+        return filter(criteria).and(join(criteria));
+    }
+
+    private Specification<E> filter(Criteria criteria) {
+
+        if (criteria.getFilters() == null || criteria.getFilters().isEmpty()) {
+            return Specification.where(null);
+        }
+
+        Specification<E> specification =
+                where(createSpecification(criteria.getFilters().remove(0)));
+        for (Filter filter : criteria.getFilters()) {
+            specification = specification.and(createSpecification(filter));
+        }
         return specification;
     }
 
+    private Specification<E> join(Criteria criteria) {
+
+        if (criteria.getJoins() == null || criteria.getJoins().isEmpty()) {
+            return Specification.where(null);
+        }
+
+        Specification<E> specification = with(criteria.getJoins().remove(0));
+        for (JoinColumn joinColumn : criteria.getJoins()) {
+            specification = with(joinColumn);
+        }
+        return specification;
+    }
+
+    public Specification<E> with(@Valid JoinColumn joinColumn) {
+        return (root, query, criteriaBuilder) -> {
+            Join<Object, Object> join = root.join(joinColumn.getJoin());
+            BasicFilter filter = (BasicFilter) joinColumn.getFilter();
+            return criteriaBuilder.equal(join.get(filter.getField()), filter.getValue());
+        };
+    }
+
     private Specification<E> createSpecification(Filter filter) {
-
-        if (filter.getValue() == null && filter.getValues() == null && filter.getBetweenDates() == null) {
-            return null;
-        }
-
-        switch (filter.getOperator()) {
-
-            case AFTER:
-                this.validateInputDateType(filter.getOperator(), filter.getValue());
-                return (root, query, cb) -> cb.greaterThan(root.get(filter.getField()),
-                        (Instant) castToRequiredType(root.get(filter.getField()).getJavaType(),
-                                filter.getValue()));
-
-            case AFTER_OR_EQUAL:
-                this.validateInputDateType(filter.getOperator(), filter.getValue());
-                return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get(filter.getField()),
-                        (Instant) castToRequiredType(root.get(filter.getField()).getJavaType(),
-                                filter.getValue()));
-
-            case BEFORE:
-                this.validateInputDateType(filter.getOperator(), filter.getValue());
-                return (root, query, cb) -> cb.lessThan(root.get(filter.getField()),
-                        (Instant) castToRequiredType(root.get(filter.getField()).getJavaType(),
-                                filter.getValue()));
-
-            case BEFORE_OR_EQUAL:
-                this.validateInputDateType(filter.getOperator(), filter.getValue());
-                return (root, query, cb) -> cb.lessThanOrEqualTo(root.get(filter.getField()),
-                        (Instant) castToRequiredType(root.get(filter.getField()).getJavaType(),
-                                filter.getValue()));
-
-            case BETWEEN:
-                return (root, query, cb) -> cb.between(root.get(filter.getField()), filter.getBetweenDates()[0],
-                        filter.getBetweenDates()[1]);
-
-            case EQUALS:
-                return (root, query, cb) -> cb.equal(root.get(filter.getField()),
-                        castToRequiredType(root.get(filter.getField()).getJavaType(),
-                                filter.getValue()));
-
-            case NOT_EQUALS:
-                return (root, query, cb) -> cb.notEqual(root.get(filter.getField()),
-                        castToRequiredType(root.get(filter.getField()).getJavaType(),
-                                filter.getValue()));
-
-            case GREATER_THAN:
-                return (root, query, cb) -> cb.gt(root.get(filter.getField()),
-                        (Number) castToRequiredType(root.get(filter.getField()).getJavaType(), filter.getValue()));
-
-            case LESS_THAN:
-                return (root, query, cb) -> cb.lt(root.get(filter.getField()),
-                        (Number) castToRequiredType(
-                                root.get(filter.getField()).getJavaType(),
-                                filter.getValue()));
-
-            case GREATER_THAN_OR_EQUAL_TO:
-                this.validateInputNumberType(filter.getOperator(), filter.getValue());
-                return (root, query, cb) -> cb.or(
-                        cb.gt(root.get(filter.getField()),
-                                (Number) castToRequiredType(root.get(filter.getField()).getJavaType(),
-                                        filter.getValue())),
-                        cb.equal(root.get(filter.getField()),
-                                castToRequiredType(root.get(filter.getField()).getJavaType(),
-                                        filter.getValue())));
-
-            case LESS_THAN_OR_EQUAL_TO:
-                this.validateInputNumberType(filter.getOperator(), filter.getValue());
-                return (root, query, cb) -> cb.or(
-                        cb.lt(root.get(filter.getField()),
-                                (Number) castToRequiredType(
-                                        root.get(filter.getField()).getJavaType(), filter.getValue())),
-                        cb.equal(root.get(filter.getField()),
-                                castToRequiredType(root.get(filter.getField()).getJavaType(),
-                                        filter.getValue())));
-
-            case LIKE:
-                return (root, query, criteriaBuilder) -> criteriaBuilder.like(root.get(filter.getField()),
-                        "%" + filter.getValue() + "%");
-
-            case IN:
-                return (root, query, criteriaBuilder) -> criteriaBuilder.in(root.get(filter.getField()))
-                        .value(castToRequiredType(
-                                root.get(filter.getField()).getJavaType(),
-                                filter.getValues()));
-
-            default:
-                throw new RuntimeException("Operation not supported.");
-
-        }
-
+        return this.filterHandlerFactory
+                .getFilterHandler(filter.getFilterType())
+                .handle(filter);
     }
 
-    private Object castToRequiredType(Class fieldType, String value) {
-        if (fieldType.isAssignableFrom(Double.class)) {
-            return Double.valueOf(value);
-        } else if (fieldType.isAssignableFrom(Integer.class)) {
-            return Integer.valueOf(value);
-        } else if (Enum.class.isAssignableFrom(fieldType)) {
-            return Enum.valueOf(fieldType, value);
+    private PageRequest getPageRequest(Criteria criteria) {
+
+        Sort sort = null;
+
+        if (criteria.getOrder() == null) {
+            sort = Sort.unsorted();
+        } else {
+            List<Sort.Order> desc = new ArrayList<>();
+
+            if (criteria.getOrder().getDescending() != null
+                    && !criteria.getOrder().getDescending().isEmpty()) {
+
+                desc = criteria.getOrder().getDescending().stream()
+                        .filter(Objects::nonNull)
+                        .map(Sort.Order::desc)
+                        .collect(Collectors.toList());
+            }
+
+            List<Sort.Order> asc = new ArrayList<>();
+
+            if (criteria.getOrder().getAscending() != null
+                    && !criteria.getOrder().getAscending().isEmpty()) {
+
+                asc = criteria.getOrder().getAscending().stream()
+                        .filter(Objects::nonNull)
+                        .map(Sort.Order::asc)
+                        .collect(Collectors.toList());
+            }
+
+            if (asc.isEmpty() && desc.isEmpty()) {
+                sort = Sort.unsorted();
+            } else if (!asc.isEmpty() && desc.isEmpty()) {
+                sort = Sort.by(asc);
+            } else if (asc.isEmpty() && !desc.isEmpty()) {
+                sort = Sort.by(desc);
+            } else if (asc.isEmpty() && desc.isEmpty()) {
+                sort = Sort.by(Stream.concat(desc.stream(), asc.stream()).toList());
+            }
         }
-        return null;
+
+        return PageRequest.of(criteria.getPage(), criteria.getSize(), sort);
     }
-
-    private Object castToRequiredType(Class fieldType, List<String> value) {
-        List<Object> lists = new ArrayList<>();
-        for (String s : value) {
-            lists.add(castToRequiredType(fieldType, s));
-        }
-        return lists;
-    }
-
-    private void validateInputDateType(OperatorType type, Object value) {
-
-        if ((OperatorType.AFTER == type || OperatorType.BEFORE == type || OperatorType.BETWEEN == type
-                || OperatorType.AFTER_OR_EQUAL == type || OperatorType.BEFORE_OR_EQUAL == type)
-                && (!(Instant.class.isAssignableFrom(value.getClass())))) {
-            throw new IllegalArgumentException(
-                    "Invalid type.  Expected Instant but was " + value.getClass().getSimpleName());
-        }
-    }
-
-    private void validateInputNumberType(OperatorType type, Object value) {
-
-        if ((OperatorType.LESS_THAN_OR_EQUAL_TO == type || OperatorType.GREATER_THAN_OR_EQUAL_TO == type
-                || OperatorType.LESS_THAN == type || OperatorType.GREATER_THAN == type)
-                && (!(Number.class.isAssignableFrom(value.getClass())))) {
-            throw new IllegalArgumentException(
-                    "Invalid type.  Expected instance of type Number, but was " + value.getClass().getSimpleName());
-        }
-
-    }
-
 }
