@@ -3,7 +3,7 @@
 Tiny, focused helpers for building **type-safe, JSON-driven JPA queries**.
 This repo pairs two modules:
 
-- **`commons-data-query`** – DTOs and enums describing filters, joins, and sorting.
+- **`commons-query-api`** – DTOs and enums describing filters, joins, and sorting.
 - **`commons-data-access`** – Spring Data JPA bridge: converts those DTOs into `Specification<T>` and provides a base DAO.
 
 Use them together to accept JSON criteria, validate it, and run efficient database queries with **zero query string concatenation**.
@@ -25,18 +25,18 @@ Use them together to accept JSON criteria, validate it, and run efficient databa
 Add both modules to your app (versions are examples):
 
 ```xml
-<!-- commons-data-query -->
+<!-- commons-query-api -->
 <dependency>
   <groupId>com.chadtalty</groupId>
-  <artifactId>commons-data-query</artifactId>
-  <version>0.0.1</version>
+  <artifactId>commons-query-api</artifactId>
+  <version>1.0.0</version>
 </dependency>
 
 <!-- commons-data-access -->
 <dependency>
   <groupId>com.chadtalty</groupId>
   <artifactId>commons-data-access</artifactId>
-  <version>0.0.1</version>
+  <version>1.0.0</version>
 </dependency>
 ```
 
@@ -215,13 +215,13 @@ mvn -q -DskipTests=false clean test
   <!-- chadtalty modules -->
   <dependency>
     <groupId>com.chadtalty</groupId>
-    <artifactId>commons-data-query</artifactId>
-    <version>0.0.1</version>
+    <artifactId>commons-query-api</artifactId>
+    <version>1.0.0</version>
   </dependency>
   <dependency>
     <groupId>com.chadtalty</groupId>
     <artifactId>commons-data-access</artifactId>
-    <version>0.0.1</version>
+    <version>1.0.0</version>
   </dependency>
 </dependencies>
 ```
